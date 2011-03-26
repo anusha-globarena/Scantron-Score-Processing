@@ -108,9 +108,9 @@ int main( int argc, char *argv[] ) {
             //            cerr << "DEBUG: Question " << qnum << endl;
             //            cerr << "DEBUG: Response " << response << endl;
             int sum = 0;
-            for( int pwr = 0; pwr < MAX_QUESTIONS; pwr++ )
+            for( int pwr = 0; pwr < MAX_RESPONSES; pwr++ )
                 sum = sum + ( ( ( 1 << pwr ) & response ) / ( 1 << pwr ) );
-            
+
             if( sum > 1 ) {
                 cerr << "ERROR! Student " << currentStudent->EID << " marked more than one answer for question " << qnum << ". Considering it wrong!" << endl;
                 continue;
