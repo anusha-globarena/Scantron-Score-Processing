@@ -14,7 +14,7 @@ Student::Student( const QString &_name, const QString &_EID, qint16 _version ) :
 
 bool Student::insertResponse( int question, QString response ) {
     qint16 binResponse = 0;
-    for( int i = 1; i <= 9; ++i ) { // FIXME: What about 0 as a response?
+    for( int i = 1; i <= MAX_RESPONSES; ++i ) { // FIXME: What about 0 as a response?
         if( response.contains( QString::number( i ) ) )
             binResponse += ( 1 << i ); // NOTE: So 10 is the first response!
     }
@@ -25,18 +25,3 @@ bool Student::insertResponse( int question, QString response ) {
     responses[ question ] = binResponse;
     return true;
 }
-
-Version::Version( qint16 versionid, const QStringList &list ) {
-    id = versionid;
-    for( int qnum = 1; qnum < list.count(); ++qnum ) {
-        qint16 binKey = 0;
-        QStringList options = list[ qnum ].split( QString("|") );
-        //        qDebug() << "Version " << versionid << "; Question " << qnum << "; Options are: " << options;
-        foreach( const QString &correctOption, options ) {
-            binKey = binKey | ( 1 << correctOption.toInt() ); // TODO: Check and report conversion failures
-        }
-        Key[ qnum ] = binKey;
-        Weightage[ qnum ] = 1.0; // FIXME: Allow arbit weightages
-    }
-}
-

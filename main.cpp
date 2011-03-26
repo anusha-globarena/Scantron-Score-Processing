@@ -12,23 +12,28 @@
 #include <QHash>
 #include <QTextStream>
 
+#include "defines.h"
+#include "studentlist.h"
+#include "versionlist.h"
+
+// TODO: Move score-calculating code to a new class and get rid of these includes
+#include "version.h"
 #include "student.h"
 
 #include <iostream>
 
 int main( int argc, char *argv[] ) {
 
-    QHash<int, Version *> versions;
-    QHash<QString, Student *> students;
-
     QApplication a( argc, argv );
 
     QTextStream cout( stdout );
     QTextStream cin( stdin );
     QTextStream cerr( stderr );
-    QString filename( argv[1] );
-    QFile f( filename );
 
+    QString filename( argv[1] );
+    QFile ScoreFile( filename );
+
+    /** CHECK IF WE'VE BEEN GIVEN ENOUGH ARGUMENTS **/
     if( argc != 3 ) {
         // Display Usage and exit
         cerr << "USAGE: " << argv[0] << " <score file> <version file>" << endl;
@@ -43,107 +48,57 @@ int main( int argc, char *argv[] ) {
         return 1;
     }
 
-    if( !f.exists() ) {
-        cerr<< "The file " << argv[1] << " does not exist!" << endl;
+    /** OPEN THE SCORE FILE **/
+    if( !ScoreFile.exists() ) {
+        cerr<< "The score file " << filename << " does not exist!" << endl;
         return 1;
     }
 
-    if( !f.open( QIODevice::ReadOnly ) ) {
-        cerr << "Failed to open " << argv[1] << ". Please check permissions!" << endl;
+    if( !ScoreFile.open( QIODevice::ReadOnly ) ) {
+        cerr << "Failed to open " << filename << ". Please check permissions!" << endl;
         return 1;
     }
 
-    /** TODO: Move this block to a separate class **/
-    /** BEGIN BLOCK **/
-    QTextStream ts( &f );
-    int ln = 0;
-    while( !ts.atEnd() ) {
-        ln++;
-        bool ok = false;
-        QString record = ts.readLine();
-        QString EID = record.mid(0, 11).trimmed().remove( ' ' ).toLower();
-        QString versionstring = record.mid(11, 6);
-        qint32 version = versionstring.toInt( &ok );
-        if( !ok ) {
-            cerr << "ERROR on line " << ln << ", EID = " << EID << ": Verison number " << record.mid(11, 6) << " is not an integer!" << endl;
-            version = 0; // Fake version number is assigned
-        }
-        if( !students.value( EID ) ) {
-            students.insert( EID, new Student( "", EID, version ) ); // The name field is not yet used, so leaving it blank.
-        }
-        Student *current = students.value( EID );
-        if( version != current->version ) {
-            cerr << "Something's wrong. Version number " << version << "conflicts with previously provided " << current->version << ", on line " << ln << " for student " << EID << ". IGNORED." << endl;
-        }
-        int qnum = record.mid(32, 2).toInt( &ok );
-        if( !ok ) {
-            cerr << "FATAL: Something\'s wrong! The file has a question number that's not an integer: " << record.mid(32, 2) << ", on line " << ln << endl;
-            return 1;
-        }
-        QString response = record.mid(35, 10);
-        if( !current->insertResponse( qnum, response ) ) {
-            cerr << "Duplicate response for question number " << qnum << " for student " << EID << " on line number " << ln << endl;
-        }
+    /** POPULATE STUDENT RESPONSES **/
+    StudentList studentlist;
+    if ( !studentlist.readResponsesFromFile( ScoreFile ) ) {
+        cerr << "POPULATING STUDENTS' LIST: SOMETHING WENT WRONG!!!!" << endl;
+        cerr << "Please see the previous output for errors" << endl;
+        cerr << "Continuing processing in 5 seconds" << endl;
+        sleep(5);
     }
-    /** END BLOCK **/
-    f.close();
+    ScoreFile.close();
 
-    
-    // All students populated.
-
-    // Now get versions
-
+    /** OPEN THE ANSWER KEY (VERSIONS) FILE **/
     filename = argv[2];
-    QFile v( filename );
+    QFile VersionFile( filename );
 
-    /** TODO: Move this block to a separate class **/
-    /** BEGIN BLOCK **/
-    if( !v.exists() ) {
-        cerr << "The file " << argv[2] << " does not exist!" << endl;
+    if( !VersionFile.exists() ) {
+        cerr << "The version file " << filename << " does not exist!" << endl;
         return 1;
     }
 
-    if( !v.open( QIODevice::ReadOnly ) ) {
-        cerr << "Failed to open " << argv[2] << ". Please check permissions!" << endl;
+    if( !VersionFile.open( QIODevice::ReadOnly ) ) {
+        cerr << "Failed to open " << filename << ". Please check permissions!" << endl;
         return 1;
     }
 
-    QTextStream vs( &v );
-    ln = 0;
-    int qcount = 0;
-    while( !vs.atEnd() ) {
-        ln++;
-        bool ok = false;
-        QString record = vs.readLine();
-        QStringList list = record.split( QString(",") );
-        int versionid = list[0].toInt( &ok );
-        if( !ok ) {
-            cerr << "ERROR! On line " << ln << " of version data: " << list[0] << " is not a valid version number! Skipping this line!" << endl;
-            continue;
-        }
-        if( list.count() > MAX_QUESTIONS + 1 ) {
-            cerr << "ERROR! On line " << ln << " of version data: A max of " << MAX_QUESTIONS << " are allowed! Skipping this line!" << endl;
-            continue;
-        }
-        if( qcount == 0 ) 
-            qcount = list.count() - 1;
-        if( list.count() - 1 != qcount ) {
-            cerr << "ERROR! On line " << ln << " of version data: Wrong number of questions! Expected " << qcount << ", but have " << list.count() - 1 << " questions in version " << versionid << ". Skipping this line!" << endl;
-            continue;
-        }
-        if( versions.value( versionid ) ) {
-            cerr << "ERROR! Duplicate version " << versionid << " on line " << ln << "! Ignoring the duplicate!" << endl;
-            continue;
-        }
-        versions.insert( versionid, new Version(versionid, list) );
+    /** OBTAIN ANSWER KEYS FOR ALL VERSIONS **/
+    VersionList versionlist;
+    if( !versionlist.readKeysFromFile( VersionFile ) ) {
+        cerr << "READING ANSWER KEYS FROM VERSION FILE: ERRORS ENCOUNTERED!!!" << endl;
+        cerr << "You have 5 seconds to hit Ctrl + C and abort if required" << endl;
+        sleep(5);
     }
-    /** END BLOCK **/
-    
-    ln = 0;
-    foreach( Student *currentStudent, students ) {
-        ++ln;
+
+
+    /** PROCESS SCORES **/
+    int student_number = 0;
+    int qcount = versionlist.numQuestions();
+    foreach( Student *currentStudent, *studentlist.list() ) {
+        ++student_number;
         // Verify that the response contains only one filled bubble:
-        Version *currentVersion = versions[ currentStudent->version ];
+        Version *currentVersion = versionlist.list()[ currentStudent->version ];
         if( !currentVersion ) {
             cerr << "ERROR! Version " << currentStudent->version << " is undefined for " << currentStudent->EID << ". Skipping processing!" << endl;
             continue;
@@ -163,17 +118,17 @@ int main( int argc, char *argv[] ) {
             //            cerr << "DEBUG: Key " << currentVersion->Key[ qnum ] << endl;
             if( response & currentVersion->Key[ qnum ] ) {
                 // Award points
+                // TODO: Add support for weightages.
                 currentStudent->score += currentVersion->Weightage[ qnum ];
                 //                cerr << "DEBUG: Awarding points: score = " << currentStudent->score << endl;
             }
         }
     }
-    cerr << "Information: Processed " << ln << " students.";
+    cerr << "Information: Processed " << student_number << " students.";
 
     // Output scores
-    foreach( Student *currentStudent, students ) {
+    foreach( Student *currentStudent, *studentlist.list() ) {
         cout << currentStudent->EID << "," << currentStudent->score << endl;
     }
 
 }
-    

@@ -5,12 +5,18 @@
 
 #ifndef VERSION_H
 #define VERSION_H
-#include "student.h"
+
+#include <QStringList>
+#include <QtCore>
+
+#include "defines.h"
 
 class Version {
  public:
+    Version( qint16 versionid, const QStringList &list );
     qint16 id;
     int Key[MAX_QUESTIONS];
+    float Weightage[MAX_QUESTIONS];
 };
 
 #endif

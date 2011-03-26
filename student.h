@@ -6,9 +6,7 @@
 #ifndef STUDENT_H
 #define STUDENT_H
 
-#ifndef MAX_QUESTIONS
-#define MAX_QUESTIONS 30
-#endif
+#include "defines.h"
 
 #include<QString>
 #include<QStringList>
@@ -25,11 +23,4 @@ class Student {
     bool insertResponse( int question, QString response );
 };
 
-class Version {
- public:
-    Version( qint16 versionid, const QStringList &list );
-    qint16 id;
-    int Key[MAX_QUESTIONS];
-    float Weightage[MAX_QUESTIONS];
-};
 #endif
