@@ -34,9 +34,9 @@ int main( int argc, char *argv[] ) {
     QFile ScoreFile( filename );
 
     /** CHECK IF WE'VE BEEN GIVEN ENOUGH ARGUMENTS **/
-    if( argc != 3 ) {
+    if( argc != 3 && argc != 4 ) {
         // Display Usage and exit
-        cerr << "USAGE: " << argv[0] << " <score file> <version file>" << endl;
+        cerr << "USAGE: " << argv[0] << " <score file> <version file> [file prefix for response statistics]" << endl;
         cerr << endl;
         cerr << "Score file is as output by the Quest Scantron Application" << endl;
         cerr << endl;
@@ -44,6 +44,11 @@ int main( int argc, char *argv[] ) {
         cerr << "version_number,key_1,key_2,key_3,...,key_n" << endl;
         cerr << "key_i is the answer key to the i^th problem. Multiple answers to be ORed are separated by \'|\'" << endl;
         cerr << "Eg: 345,1,1,3|4,5,6,2,3" << endl;
+        cerr << endl;
+        cerr << "The response statistics files contain information about the number of people who chose a particular answer for a given question, in the following CSV (without quotes) format:" << endl;
+        cerr << "Question #, Option 1, Option 2, ..." << endl;
+        cerr << "Each column (other than the first one) thus represents the % that chose the option corresponding to that column for the question number of the first column" << endl;
+        cerr << "For each version, the program prints out one response stats table. It is left to the user to collate these (but it could be scripted or put into a spreadsheet)" << endl;
         cerr << endl;
         return 1;
     }
@@ -131,4 +136,52 @@ int main( int argc, char *argv[] ) {
         cout << currentStudent->EID << "," << currentStudent->score << endl;
     }
 
+    /** RESPONSE STATISTICS **/
+    foreach( Version *version, versionlist.list() ) {
+        int Options[MAX_RESPONSES];
+
+        QString dumpfilename = QString( argv[3] ) + QString::number( version->id );
+        QFile dumpfile( dumpfilename );
+
+        if( !dumpfile.open( QIODevice::WriteOnly ) ) {
+            cerr << "Failed to open file " <<  dumpfilename << " for writing response statistics of version #" << version->id << endl;
+            cerr << "Skipping to the next version!" << endl;
+            continue;
+        }
+
+        QTextStream dumpstream( &dumpfile );
+
+        /* For each question... */
+        dumpstream << "# Response statistics table for version " << version->id << endl;
+        for( int qnum = 1; qnum <= qcount; ++qnum ) {
+
+            /* Reset option counts to zero */
+            for( int j = 0; j < MAX_RESPONSES; ++j )
+                Options[j] = 0;
+
+            /* Collate responses to each option for this question */
+            foreach( Student *student, *studentlist.list() ) {
+
+                qint16 response = student->responses[ qnum ];
+
+                for( int j = 0; j < MAX_RESPONSES; ++j ) {
+                    if( ( 1 << j ) & response ) {
+                        Options[j] += 1;
+                    }
+                }
+            }
+
+            dumpstream << qnum;
+            /* Dump a line into the file corresponding to this question */
+            for( int j = 0; j < MAX_RESPONSES; ++j ) {
+                float percentage = 100.0 * (double( Options[j] )/double( studentlist.list()->count() ));
+                dumpstream << "," << percentage;
+            }
+
+            dumpstream << endl;
+
+        }
+
+        dumpfile.close();
+    }
 }
