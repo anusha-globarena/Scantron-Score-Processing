@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ -z $1 ]; then
+    echo "USAGE: $0 <Response Statistics File>"
+    exit 1;
+fi;
+
 datafile=$1;
 plotfileprefix=$datafile; # The plots are prefixed by the data file name
 
