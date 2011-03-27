@@ -136,7 +136,11 @@ int main( int argc, char *argv[] ) {
         cout << currentStudent->EID << "," << currentStudent->score << endl;
     }
 
+
     /** RESPONSE STATISTICS **/
+    if( argc != 4 )
+        return 0;
+
     foreach( Version *version, versionlist.list() ) {
         int Options[MAX_RESPONSES];
 
