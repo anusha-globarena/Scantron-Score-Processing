@@ -84,9 +84,32 @@ echo "\end{document}" >> $latexttempfile
 
 pdflatex -interaction=nonstopmode $latexttempfile > /dev/null
 
-# Tarball all the individual response files
+# Also make a multi-page PDF with all the plots
+latexttempfile2="multi-page-all-plots.tex"
+echo "\documentclass{article}" > $latexttempfile2
+echo "\usepackage{graphicx}" >> $latexttempfile2
+echo "\usepackage[landscape,top=1.0cm,bottom=1.0cm,left=1.0cm,right=2.0cm]{geometry}" >> $latexttempfile2
+echo "\begin{document}" >> $latexttempfile2
+echo "\pagestyle{empty}" >> $latexttempfile2
+echo "\begin{center}" >> $latexttempfile2
+for file in ${plotfileprefix}-question-*.pdf; do
+    echo "\begin{figure}[hbtp]" >> $latexttempfile2
+    echo "  \includegraphics[scale=2.0]{$file}" >> $latexttempfile2
+    echo "\end{figure}" >> $latexttempfile2
+    echo "\end{center}" >> $latexttempfile2
+    echo "\begin{center}" >> $latexttempfile2
+#    echo "\\" >> $latexttempfile
+done;
+echo "\end{center}" >> $latexttempfile2
+echo "\end{document}" >> $latexttempfile2
+
+pdflatex -interaction=nonstopmode $latexttempfile2 > /dev/null
+
+# Move plot files to a dedicated directory
 mkdir -p plots
 mv -f ${plotfileprefix}-question-*.pdf plots/
+
+## Tarball all the individual response files
 tar czf ${plotfileprefix}-all-plots.tar.gz plots/${plotfileprefix}-question-*.pdf
 
 # Cleanup
@@ -97,3 +120,6 @@ rm -f $tempfile
 rm -f $latexttempfile
 mv `echo $latexttempfile | sed 's!\.tex$!.pdf!'` ${plotfileprefix}-collated-plots.pdf
 rm -f `echo $latexttempfile | sed 's!\.tex$!.*!'`
+rm -f $latexttempfile2
+mv `echo $latexttempfile2 | sed 's!\.tex$!.pdf!'` ${plotfileprefix}-multi-page-all-plots.pdf
+rm -f `echo $latexttempfile2 | sed 's!\.tex$!.*!'`
