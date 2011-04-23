@@ -20,6 +20,10 @@ bool StudentList::readResponsesFromFile( QFile &f ) {
         bool ok = false;
         QString record = ts.readLine();
         QString EID = record.mid(0, 11).trimmed().remove( ' ' ).toLower();
+        if( EID.isEmpty() ) {
+            cerr << "ERROR on line " << ln << ": EID Missing! Will skip this entry!" << endl;
+            continue;
+        }
         QString versionstring = record.mid(11, 6);
         qint32 version = versionstring.toInt( &ok );
         if( !ok ) {
